@@ -1,27 +1,10 @@
 const express = require('express');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const dotenv = require('dotenv');
-const bodyParser = require('body-parser');
-const fs = require('fs');
 
 dotenv.config();
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-  secure: true,
-});
-
 const app = express();
-
-// Middleware
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-// Multer setup for local file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, './uploads');
@@ -32,38 +15,19 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// API Endpoint to upload image
-app.post('/upload', upload.single('image'), async (req, res) => {
-  if (!req.file) {
+app.post('/upload', upload.array('images', 10), (req, res) => {
+  console.log('Received files:', req.files); // Debugging line
+  if (!req.files || req.files.length === 0) {
     return res.status(400).json({
       success: false,
-      message: 'No file uploaded!',
+      message: 'No files uploaded!',
     });
   }
-  
-  
-
-  try {
-    const filePath = req.file.path;
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: 'uploads', // Optional: organize images in a specific folder
-    });
-
-    // Remove the file from the local server after uploading to Cloudinary
-    fs.unlinkSync(filePath);
-
-    res.json({
-      success: true,
-      message: 'Image uploaded successfully!',
-      data: result,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Image upload failed!',
-      error: error.message,
-    });
-  }
+  res.json({
+    success: true,
+    message: 'Files uploaded successfully!',
+    files: req.files,
+  });
 });
 
 const PORT = process.env.PORT || 3000;
